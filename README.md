@@ -1,17 +1,84 @@
-# tiri_tarih
+# Тірі Тарих (Tiri Tarih)
 
-A new Flutter project.
+Мобильное Flutter‑приложение (MVP) для интерактивного гида и квестов по Кызылординской области. Основная цель — перенести интерактивный HTML‑макет в нативное приложение с сохранением анимаций и логики, добавив поддержку карт, маршрутов, голосовых подсказок и AI‑помощника на казахском языке.
 
-## Getting Started
+## Возможности
 
-This project is a starting point for a Flutter application.
+- **Онбординг** с fullscreen изображением и кнопками «Кіру» / «Тіркелу».
+- **Главный экран** с нижней навигацией (Карта, Маркет, Достар, Профиль) и плавающей кнопкой AI.
+- **Карта** на OpenStreetMap (flutter_map):
+  - текущая геолокация пользователя;
+  - маркеры объектов с карточками;
+  - построение маршрута (OSRM API) и геофенсинг (оповещение при приближении);
+  - автоматическое голосовое повествование и показ видео при приближении к объекту.
+- **Экран объекта**: описание, изображения, локальный квест-викторина.
+- **Маркет / Достар / Профиль** — статические экраны в стиле макета.
+- **Офлайн-карты** — экран с прогресс-анимацией загрузки.
+- **AI-көмекші** (чат на казахском) на базе Google Gemini с fallback между доступными моделями.
+- Весь UI и контент локализован на казахский язык. Данные объектов и квестов хранятся локально.
 
-A few resources to get you started if this is your first Flutter project:
+## Технологический стек
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Flutter** (latest stable, SDK ≥ 3.0)
+- **Dart**
+- **flutter_map + OpenStreetMap** — карты и маркеры
+- **geolocator** — GPS и потоковая геолокация
+- **http** — запросы к OSRM маршрутизации
+- **flutter_tts** — голосовые подсказки (казахский)
+- **video_player** — воспроизведение видео
+- **google_generative_ai** — интеграция с Google Gemini API
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# shadiyar
+## Структура проекта
+
+```
+lib/
+├── constants/      # Строки и цвета
+├── data/           # Локальные данные (POI, квесты)
+├── models/         # Модели данных (POI, Quest)
+├── screens/        # Экраны приложения
+├── services/       # Сервисы (AI, GPS, TTS, маршруты, геофенсинг)
+└── main.dart       # Точка входа
+```
+
+## Установка и запуск
+
+1. Установите Flutter SDK и необходимые Android/iOS инструменты.
+2. Находясь в корне проекта, выполните:
+   ```bash
+   flutter pub get
+   ```
+3. Для debug-запуска:
+   ```bash
+   flutter run
+   ```
+4. Сборка release APK:
+   ```bash
+   flutter build apk --release
+   ```
+   APK появится в `build/app/outputs/flutter-apk/app-release.apk`.
+
+## API и конфигурация
+
+- **Gemini API**: ключ задаётся в `lib/services/gemini_service.dart`. Реализован автоматический fallback между моделями `gemini-pro`, `gemini-1.5-flash`, `gemini-1.5-pro`.
+- **OSRM**: используется публичный endpoint `https://router.project-osrm.org`.
+- Шрифты системные; изображения и тестовые видео — placeholder URL.
+
+## Известные предупреждения
+
+- При сборке Gradle выдаёт предупреждение о версии NDK. Можно установить NDK 27.0.12077973 или переопределить `ndkVersion`.
+- Release APK подписан debug-ключом — для публикации создайте свой signing config.
+
+## Полезные файлы
+
+- `FEATURES.md` — описание реализованных модулей (GPS, маршруты, AI и пр.).
+- `GEMINI_SETUP.md` — инструкции по настройке Gemini API.
+- `TROUBLESHOOTING.md` — решение типичных проблем (API ошибки, лимиты, сеть).
+
+## Дальнейшие шаги (MVP → Production)
+
+- Подключение backend/API для динамических данных.
+- Реальные текстуры/изображения и медиаконтент.
+- Авторизация и профиль пользователя.
+- Управление кэшированием карт и офлайн-функционалом.
+
+Проект готов к демонстрации MVP и развитию до полноценного продукта.
