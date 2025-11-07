@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Живая История (Финальный Макет)</title>
+
+    <!-- PWA Настройки -->
+    <meta name="theme-color" content="#FF9500">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <style>
+        /* === ОБЩИЕ СТИЛИ И НАСТРОЙКИ === */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --primary-orange: #FF9500;
+            --text-color: #FFFFFF;
+            --text-secondary-color: #AAAAAA;
+            --card-bg-color: #1E1E1E;
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color); }
+        
+        /* === СТРУКТУРА ПРИЛОЖЕНИЯ === */
+        .app-view { display: none; }
+        .app-view.active { display: block; height: 100%; }
+        .app-container { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
+        main.content { flex-grow: 1; overflow-y: auto; padding-bottom: 80px; }
+        .screen { display: none; padding: 1.5rem; animation: fadeIn 0.3s ease-in-out; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* === ЭКРАН ВХОДА (ONBOARDING) === */
+        .onboarding-view {
+            display: flex; flex-direction: column; justify-content: flex-end; height: 100%;
+            padding: 2rem; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%), url('https://via.placeholder.com/800x1200/121212/FFFFFF?text=Baikonur') no-repeat center center;
+            background-size: cover;
+        }
+        .onboarding-content { text-align: center; color: white; }
+        .onboarding-content h1 { font-size: 36px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .onboarding-content p { font-size: 18px; margin: 1rem 0 2rem 0; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        
+        /* === НИЖНЯЯ НАВИГАЦИЯ И КНОПКА AI === */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background-color: rgba(30, 30, 30, 0.85); backdrop-filter: blur(10px); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; background: none; border: none; color: var(--text-secondary-color); font-size: 10px; font-weight: 500; transition: color 0.2s ease, transform 0.2s ease; cursor: pointer; flex: 1; text-align: center; }
+        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; stroke: var(--text-secondary-color); transition: stroke 0.2s ease; }
+        .nav-btn.active, .nav-btn:active { color: var(--primary-orange); transform: scale(1.05); }
+        .nav-btn.active svg, .nav-btn:active svg { stroke: var(--primary-orange); }
+        .ai-fab { position: fixed; bottom: 90px; right: 20px; width: 60px; height: 60px; background-color: var(--primary-orange); border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: transform 0.2s ease; cursor: pointer; }
+        .ai-fab:active { transform: scale(0.95); }
+        
+        /* === ОСНОВНЫЕ СТИЛИ === */
+        .btn { width: 100%; padding: 1rem; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; }
+        .btn:active:not(:disabled) { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary-orange); color: var(--bg-color); }
+        .btn-secondary { background-color: var(--card-bg-color); color: var(--text-color); margin-top: 1rem; }
+        .poi-card, .friend-card, .market-banner, .download-card { background-color: var(--card-bg-color); border-radius: 12px; margin-bottom: 1rem; padding: 1rem; }
+        
+        /* === ВСПОМОГАТЕЛЬНЫЕ ЭКРАНЫ (Object, Offline) === */
+        .object-detail-screen, .generic-screen { position: fixed; top: 100%; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 2000; transition: top 0.4s cubic-bezier(0.25, 1, 0.5, 1); display: flex; flex-direction: column; }
+        .object-detail-screen.active, .generic-screen.active { top: 0; }
+        .screen-header { display: flex; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+        .back-btn { background: none; border: none; color: white; cursor: pointer; font-size: 24px; line-height: 1; padding-right: 1rem;}
+        .screen-header h2 { margin: 0; font-size: 20px; }
+        .screen-content { padding: 1.5rem; flex-grow: 1; overflow-y: auto; }
+        
+        .object-header { position: relative; width: 100%; height: 40vh; flex-shrink: 0; }
+        .object-header img { width: 100%; height: 100%; object-fit: cover; }
+        .object-header .overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to top, var(--bg-color), transparent); }
+        .object-content { padding: 1.5rem; flex-grow: 1; overflow-y: auto; padding-bottom: 100px; }
+        .object-content h1 { font-size: 32px; }
+        .quest-module { background-color: var(--card-bg-color); border-radius: 16px; padding: 1.5rem; margin-top: 2rem; }
+        .quest-options .btn { margin-bottom: 1rem; background-color: rgba(255, 255, 255, 0.1); }
+        
+        /* === ЭКРАН МАРКЕТА === */
+        .market-banner { border: 1px solid var(--primary-orange); text-align: center; }
+        .market-banner h3 { color: var(--primary-orange); }
+        .market-banner p { margin: 0.5rem 0 1.5rem 0; color: var(--text-secondary-color); }
+
+        /* === ЭКРАН ОФЛАЙН === */
+        .download-card { display: flex; align-items: center; justify-content: space-between; }
+        .download-progress-bar { width: 100px; height: 8px; background-color: #333; border-radius: 4px; overflow: hidden; display: none; }
+        .download-progress-bar div { width: 0%; height: 100%; background-color: var(--primary-orange); transition: width 1.5s ease; }
+        
+        /* === МОДАЛКА AI === */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 3000; display: flex; justify-content: center; align-items: flex-end; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { width: 100%; max-width: 500px; height: 85vh; background-color: var(--bg-color); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        .modal-header { padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .ai-chat-box { flex-grow: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; }
+        .message { max-width: 80%; padding: 0.75rem 1rem; border-radius: 18px; margin-bottom: 1rem; line-height: 1.5; }
+        .message.bot { background-color: var(--card-bg-color); border-bottom-left-radius: 4px; align-self: flex-start; }
+        .message.user { background-color: var(--primary-orange); color: var(--bg-color); border-bottom-right-radius: 4px; align-self: flex-end; margin-left: auto; }
+        .ai-input-area { display: flex; padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
+        #ai-user-input { flex-grow: 1; background-color: var(--card-bg-color); border: none; border-radius: 20px; padding: 0.75rem 1rem; color: var(--text-color); font-size: 16px; }
+        #ai-send-btn { background: none; border: none; padding: 0 0 0 1rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- === ЭКРАН 1: ОНБОРДИНГ === -->
+    <div id="onboarding-view" class="app-view active">
+        <div class="onboarding-view">
+            <div class="onboarding-content">
+                <h1>Живая История</h1>
+                <p>Ваш интерактивный гид по сердцу Арала.</p>
+                <button id="login-btn" class="btn btn-primary">Войти в приключение</button>
+                <button id="register-btn" class="btn btn-secondary">Создать аккаунт</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- === ЭКРАН 2: ОСНОВНОЕ ПРИЛОЖЕНИЕ === -->
+    <div id="main-app-view" class="app-view">
+        <div class="app-container">
+            <button id="ai-main-btn" class="ai-fab">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><use href="#icon-ai"/></svg>
+            </button>
+            
+            <main class="content">
+                <section id="map-screen" class="screen active">
+                    <h1>Исследуйте</h1>
+                    <div class="fake-map-container" style="display: flex; align-items: center; justify-content: center; color: var(--text-secondary-color);">Макет интерактивной карты</div>
+                    <h2 style="font-size: 18px; margin: 2rem 0 1rem 0;">Рядом с вами</h2>
+                    <div class="poi-card" data-object-id="korkyt-ata"><img src="https://via.placeholder.com/100x100/FF9500/121212?text=K" alt="K"><div><strong>Мемориал Коркыт Ата</strong><p>Сакральное место • 120 км</p></div></div>
+                    <div class="poi-card" data-object-id="syganak"><img src="https://via.placeholder.com/100x100/FF9500/121212?text=S" alt="S"><div><strong>Городище Сыганак</strong><p>История • 210 км</p></div></div>
+                </section>
+
+                <section id="market-screen" class="screen">
+                    <h1>Сокровищница</h1>
+                    <div class="market-banner">
+                        <h3>Паспорт Исследователя</h3>
+                        <p>Доступ ко всем квестам, офлайн-карты и безлимитный AI-гид.</p>
+                        <button class="btn btn-primary">Получить за 9900 ₸/год</button>
+                    </div>
+                    <h2>Уникальный Опыт</h2>
+                    <div class="poi-card"><img src="https://via.placeholder.com/100x100/FF9500/121212?text=J" alt="J"><div><strong>Джип-тур на Арал</strong><p>Приключение • 5000 Алтынов</p></div></div>
+                    <div class="poi-card"><img src="https://via.placeholder.com/100x100/FF9500/121212?text=C" alt="C"><div><strong>Урок игры на кобызе</strong><p>Культура • 1500 Алтынов</p></div></div>
+                </section>
+
+                <section id="friends-screen" class="screen">
+                    <h2>Рейтинг</h2>
+                    <div class="friend-card" style="display: flex; align-items: center;"><span class="friend-rank">1.</span><div style="width:50px; height:50px; border-radius:50%; background-color: var(--text-secondary-color); margin: 0 1rem;"></div><div><strong>Aidos_Sultan</strong><p>Уровень 25 • Легенда</p></div></div>
+                    <div class="friend-card" style="display: flex; align-items: center; border: 1px solid var(--primary-orange);"><span class="friend-rank">12.</span><div style="width:50px; height:50px; border-radius:50%; background-color: var(--primary-orange); margin: 0 1rem;">U</div><div><strong>User_Nomad</strong><p>Уровень 12 • Исследователь</p></div></div>
+                    <div class="friend-card" style="display: flex; align-items: center;"><span class="friend-rank">13.</span><div style="width:50px; height:50px; border-radius:50%; background-color: var(--text-secondary-color); margin: 0 1rem;"></div><div><strong>Explorer22</strong><p>Уровень 11 • Путешественник</p></div></div>
+                </section>
+                
+                <section id="profile-screen" class="screen">
+                     <div class="profile-header">
+                        <div class="profile-avatar">U</div>
+                        <div><strong>User_Nomad</strong><span>Уровень 12 • Исследователь</span></div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card" style="text-align:center;"><div class="value">28</div><span>Мест посещено</span></div>
+                        <div class="stat-card" style="text-align:center;"><div class="value">15</div><span>Квестов пройдено</span></div>
+                    </div>
+                     <button id="offline-maps-btn" class="btn btn-secondary" style="margin-top:0;">Офлайн-карты</button>
+                     <button class="btn btn-secondary">Настройки</button>
+                </section>
+            </main>
+            
+            <nav class="bottom-nav">
+                <button class="nav-btn active" data-screen="map-screen"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><use href="#icon-map"/></svg>Карта</button>
+                <button class="nav-btn" data-screen="market-screen"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><use href="#icon-market"/></svg>Маркет</button>
+                <button class="nav-btn" data-screen="friends-screen"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><use href="#icon-friends"/></svg>Друзья</button>
+                <button class="nav-btn" data-screen="profile-screen"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><use href="#icon-profile"/></svg>Профиль</button>
+            </nav>
+        </div>
+    </div>
+    
+    <!-- ДОПОЛНИТЕЛЬНЫЕ ЭКРАНЫ -->
+    <div id="object-detail-screen" class="object-detail-screen">
+        <div class="object-header">
+             <img src="" id="object-image" alt="Объект">
+             <div class="overlay"></div>
+        </div>
+        <div class="object-content">
+             <h1 id="object-title">Название объекта</h1>
+             <p id="object-description">...</p>
+             <div class="quest-module">
+                <button id="start-quest-btn" class="btn btn-primary">Начать квест</button>
+                <div id="quest-container" style="display: none;">
+                    <h3 id="quest-title"></h3><div id="quest-options"></div>
+                </div>
+                <div id="quest-feedback" style="display: none;"></div>
+             </div>
+        </div>
+    </div>
+    <div id="offline-maps-screen" class="generic-screen">
+        <div class="screen-header"><button class="back-btn">&larr;</button><h2>Офлайн-карты</h2></div>
+        <div class="screen-content">
+            <div class="download-card">
+                <div><strong>Карта Кызылординской области</strong><p style="color:var(--text-secondary-color); font-size:14px; margin-top:4px;">256 МБ</p></div>
+                <div>
+                    <button id="download-btn" class="btn btn-primary" style="width:120px; padding:0.75rem;">Скачать</button>
+                    <div class="download-progress-bar"><div id="progress"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА AI -->
+    <div id="ai-helper-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>AI Помощник</h2>
+                <button id="ai-close-btn" class="close-btn" style="line-height:1;">&times;</button>
+            </div>
+            <div id="ai-chat-box" class="ai-chat-box">
+                <div class="message bot">Привет! Я ваш AI-гид. Спросите меня что-нибудь, например: "Что посмотреть в Кызылорде за 1 день?"</div>
+            </div>
+            <div class="ai-input-area">
+                <input id="ai-user-input" type="text" placeholder="Ваш вопрос...">
+                <button id="ai-send-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width:28px;height:28px;"><use href="#icon-send"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SVG Иконки -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <path id="icon-map" stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m0 0v-8.25m0 8.25h3.75m-3.75 0H5.25m11.25 0V15m0 0v-8.25m0 8.25h3.75m-3.75 0h-3.75M12 21a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            <path id="icon-market" stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z"/>
+            <path id="icon-friends" stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m-7.286-2.72a3 3 0 0 0-4.682 2.72 9.094 9.094 0 0 0 3.741.479M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            <path id="icon-profile" stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            <path id="icon-ai" d="M16.92,16.22C16.5,15.79 16.22,15.24 16.07,14.65C16.25,14.05 16.5,13.5 16.79,13C17.43,11.83 17.5,10.37 16.94,9.15C16.43,8.04 15.2,7.44 14.15,7.5C13,7.57 12,8.44 12,9.65C12,10.61 12.63,11.43 13.5,11.81C13.82,11.96 14.18,12 14.5,12C14.86,12 15.2,11.94 15.5,11.81C15.65,12.5 15.54,13.23 15.2,13.87C14.77,14.67 14,15.34 13.06,15.76C12,16.24 10.74,16.23 9.68,15.73C8.61,15.22 7.89,14.33 7.7,13.26C7.5,12.18 7.84,11 8.6,10.15C9.37,9.3 10.5,8.81 11.66,9C11.83,8.07 12.5,7.29 13.4,6.86C14.79,6.2 16.53,6.31 17.84,7.21C19.16,8.12 19.8,9.75 19.34,11.39C18.91,12.92 17.65,14.14 16.07,14.65C15.93,15.25 15.65,15.82 15.2,16.26L18.4,19.45C18.6,19.65 18.6,19.96 18.4,20.16L17.35,21.21C17.15,21.41 16.84,21.41 16.65,21.21L13.1,17.66C12.11,18.46 10.84,18.89 9.5,18.89C7.45,18.89 5.5,17.89 4.25,16.2C2.96,14.48 2.5,12.37 3.06,10.35C3.62,8.34 5.1,6.74 7,6.05C8.91,5.36 11.08,5.66 12.83,6.87L13.4,5.43C12,4.45 10.23,4.04 8.43,4.55C6.1,5.22 4.19,6.86 3.19,9.05C2.18,11.24 2.27,13.8 3.44,15.86C4.6,17.92 6.69,19.29 9,19.82C9.17,19.86 9.33,19.89 9.5,19.89C11.16,19.89 12.75,19.29 14.04,18.23L16.92,16.22Z" />
+            <path id="icon-send" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"/>
+        </defs>
+    </svg>
+    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // === КОНСТАНТЫ ВСЕХ ЭЛЕМЕНТОВ ===
+    const onboardingView = document.getElementById('onboarding-view');
+    const mainAppView = document.getElementById('main-app-view');
+    const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
+
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const screens = document.querySelectorAll('.screen');
+    const poiCards = document.querySelectorAll('.poi-card');
+    
+    const objectDetailScreen = document.getElementById('object-detail-screen');
+    const objectTitle = document.getElementById('object-title');
+    const objectDescription = document.getElementById('object-description');
+    const objectImage = document.getElementById('object-image');
+    
+    const startQuestBtn = document.getElementById('start-quest-btn');
+    const questContainer = document.getElementById('quest-container');
+    const questTitle = document.getElementById('quest-title');
+    const questOptions = document.getElementById('quest-options');
+    const questFeedback = document.getElementById('quest-feedback');
+
+    const aiMainBtn = document.getElementById('ai-main-btn');
+    const aiHelperModal = document.getElementById('ai-helper-modal');
+    const aiCloseBtn = document.getElementById('ai-close-btn');
+    const aiSendBtn = document.getElementById('ai-send-btn');
+    const aiUserInput = document.getElementById('ai-user-input');
+    const aiChatBox = document.getElementById('ai-chat-box');
+
+    const offlineMapsBtn = document.getElementById('offline-maps-btn');
+    const offlineMapsScreen = document.getElementById('offline-maps-screen');
+    const genericBackBtns = document.querySelectorAll('.back-btn, #object-detail-screen .screen-header .back-btn'); // Обновленный селектор
+    const downloadBtn = document.getElementById('download-btn');
+    const progressBar = document.getElementById('progress');
+
+    let currentQuest = null;
+
+    // === ДАННЫЕ ДЛЯ МАКЕТА ===
+    const objectData = {
+        'korkyt-ata': {
+            title: 'Мемориал Коркыт Ата', description: 'Сакральный центр тюркского мира...',
+            quest: {
+                title: 'Легенды Коркыт Ата', questions: [{ text: 'Какой муз. инструмент создал Коркыт Ата?', options: ['Домбра', 'Кобыз', 'Жетыген'], answer: 'Кобыз' }, { text: 'В поисках чего странствовал Коркыт Ата?', options: ['Богатства', 'Славы', 'Бессмертия'], answer: 'Бессмертия' }]
+            }
+        },
+        'syganak': {
+            title: 'Городище Сыганак', description: 'Бывшая столица Кипчакского ханства...',
+            quest: {
+                title: 'Тайны Сыганака', questions: [{ text: 'Столицей какого ханства был Сыганак?', options: ['Золотой Орды', 'Казахского ханства', 'Чагатайского улуса'], answer: 'Казахского ханства' }]
+            }
+        }
+    };
+    
+    // === ОБЩИЕ ФУНКЦИИ ===
+    function switchView(viewToShow) {
+        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+        viewToShow.classList.add('active');
+    }
+
+    // === ЛОГИКА ОНБОРДИНГА ===
+    loginBtn.addEventListener('click', () => switchView(mainAppView));
+    registerBtn.addEventListener('click', () => switchView(mainAppView));
+
+    // === ЛОГИКА НАВИГАЦИИ И ЭКРАНОВ ===
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const screenId = button.dataset.screen;
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            screens.forEach(screen => screen.classList.toggle('active', screen.id === screenId));
+        });
+    });
+
+    offlineMapsBtn.addEventListener('click', () => offlineMapsScreen.classList.add('active'));
+    genericBackBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.generic-screen, .object-detail-screen').classList.remove('active');
+        });
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        downloadBtn.style.display = 'none';
+        const progressBarContainer = downloadBtn.nextElementSibling;
+        progressBarContainer.style.display = 'block';
+        setTimeout(() => {
+            progressBarContainer.querySelector('div').style.width = '100%';
+            setTimeout(() => {
+                downloadBtn.textContent = '✅ Скачано';
+                downloadBtn.disabled = true;
+                downloadBtn.style.display = 'block';
+                progressBarContainer.style.display = 'none';
+            }, 1600);
+        }, 100);
+    });
+    
+    // === ЛОГИКА ОТКРЫТИЯ/ЗАКРЫТИЯ ОБЪЕКТА ===
+    poiCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const objectId = card.dataset.objectId;
+            const data = objectData[objectId];
+            if (data) {
+                objectTitle.textContent = data.title;
+                objectDescription.textContent = data.description;
+                objectImage.src = card.querySelector('img').src.replace('100x100', '600x400');
+                currentQuest = data.quest;
+                resetQuestView();
+                // Заголовок объекта теперь часть основного контента, а не хедера
+                // поэтому убираем кнопку назад из этого места
+                document.querySelector('.object-detail-screen').classList.add('active');
+            }
+        });
+    });
+
+    // === ЛОГИКА КВЕСТОВ ===
+    function resetQuestView() { /* ... код без изменений ... */ }
+    startQuestBtn.addEventListener('click', () => { /* ... код без изменений ... */ });
+    function displayQuestion(index) { /* ... код без изменений ... */ }
+    function handleAnswer(selected, correct, index, btn) { /* ... код без изменений ... */ }
+    function showQuestResult(isSuccess) { /* ... код без изменений ... */ }
+
+    // === ЛОГИКА AI-ПОМОЩНИКА ===
+    aiMainBtn.addEventListener('click', () => aiHelperModal.classList.add('active'));
+    aiCloseBtn.addEventListener('click', () => aiHelperModal.classList.remove('active'));
+    aiSendBtn.addEventListener('click', sendUserMessage);
+    aiUserInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendUserMessage(); });
+
+    function sendUserMessage() {
+        const userText = aiUserInput.value.trim();
+        if (userText) {
+            addMessage(userText, 'user');
+aiUserInput.value = '';
+            setTimeout(getBotResponse, 1000);
+        }
+    }
+    function addMessage(text, type) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        div.innerHTML = text;
+        aiChatBox.appendChild(div);
+        aiChatBox.scrollTop = aiChatBox.scrollHeight;
+    }
+    function getBotResponse() {
+        addMessage("Отличный вопрос! Вот примерный план на 1 день:<br>1. <strong>Мемориал Коркыт Ата.</strong><br>2. Обед в этно-ауле.<br>3. Поездка на озеро Камбаш.", 'bot');
+    }
+
+    // === КОД КВЕСТОВ ИЗ ПРЕДЫДУЩЕЙ ВЕРСИИ, КОТОРЫЙ НУЖНО СКОПИРОВАТЬ ===
+    function resetQuestView() {
+        questContainer.style.display = 'none';
+        questFeedback.style.display = 'none';
+        startQuestBtn.style.display = 'block';
+        startQuestBtn.disabled = false;
+        startQuestBtn.textContent = 'Начать квест';
+    }
+    startQuestBtn.addEventListener('click', () => {
+        if (currentQuest) {
+            startQuestBtn.style.display = 'none';
+            questContainer.style.display = 'block';
+            displayQuestion(0);
+        }
+    });
+    function displayQuestion(index) {
+        if (index >= currentQuest.questions.length) {
+            showQuestResult(true); return;
+        }
+        const q = currentQuest.questions[index];
+        questTitle.textContent = q.text;
+        questOptions.innerHTML = '';
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.textContent = opt;
+            btn.onclick = () => handleAnswer(opt, q.answer, index, btn);
+            questOptions.appendChild(btn);
+        });
+    }
+    function handleAnswer(selected, correct, index, btn) {
+        document.querySelectorAll('#quest-options .btn').forEach(b => b.disabled = true);
+        if (selected === correct) {
+            btn.style.backgroundColor = 'var(--success-color)';
+            setTimeout(() => displayQuestion(index + 1), 1000);
+        } else {
+            btn.style.backgroundColor = 'var(--error-color)';
+            setTimeout(() => showQuestResult(false), 1000);
+        }
+    }
+    function showQuestResimage.pngult(isSuccess) {
+        questContainer.style.display = 'none';
+        questFeedback.style.display = 'block';
+        questFeedback.innerHTML = isSuccess ? `<h3>Поздравляем!</h3><p>Квест пройден! +100 XP, +20 Алтынов.</p>` : `<h3>Неверный ответ</h3><p>Квест не пройден. Попробуйте еще раз!</p>`;
+        startQuestBtn.textContent = "Пройти заново";
+        startQuestBtn.style.display = 'block';
+    }
+});
+</script>
+
+</body>
+</html>
